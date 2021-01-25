@@ -1,0 +1,41 @@
+<!-- 运行结果
+1111
+An error
+finally must reach!
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>菜鸟教程(runoob.com)</title>
+</head>
+<body>
+<p id="demo"></p>
+<script>
+	function testPromise(){
+		let log = document.getElementById('demo');
+        		log.insertAdjacentHTML('beforeend', 'promise 程序测试 <br/>');
+		
+		let promise_1 = new Promise((resolve, reject) => {
+			log.insertAdjacentHTML('beforeend', '1111 <br/>');
+			throw "An error";
+			resolve(2222);
+		});
+		
+		promise_1.then(function (value) {
+			log.insertAdjacentHTML('beforeend', value + '<br/>');
+			return 3333;
+		}).then(function (value) {
+			log.insertAdjacentHTML('beforeend', value + '<br/>');
+			throw "An error";
+		}).catch(function (err) {
+			log.insertAdjacentHTML('beforeend', err + '<br/>');
+		}).finally(function () {
+			log.insertAdjacentHTML('beforeend', 'finally must reach!<br/>');
+		});
+	}
+	
+	testPromise();
+</script>
+</body>
+</html>

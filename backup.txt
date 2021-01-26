@@ -1,0 +1,15 @@
+- Front.js shakaDemo.Front.createAssetCardFor_()    ----    这里其实只是调用的时候注册了个addButon触发消息函数，运行的时候会走到这个触发消息函数里面
+		- demo/main.js shakaDemo.Main.loadAsset()
+			- lib/player.js shaka.Player.setVideoContainer()    ----    选择使用browser自带的VTTCue还是用shakaplayer UI来显示字幕或者caption信息
+			- lib/player.js shaka.Player.load()    ----    将asset信息导入到walker routine内部，然后开始运作整体流程
+      
+      
+      
+      
+- /lib/routing/walker.js shaka.routing.Walker.doOneThing_()
+	-/lib/routing/walker.js shaka.routing.Walker.tryNewRoute_()
+	-/lib/routing/walker.js shaka.routing.Walker.takeNextStep_() 
+		-/lib/player.js shaka.routing.Walker.Implementation.getNext()
+		 	-/lib/player.js shaka.routing.Walker.Implementation.getNextStep_()
+		-/lib/player.js shaka.routing.Walker.Implementation.enterNode()
+			-/lib/player.js shaka.Player.action()

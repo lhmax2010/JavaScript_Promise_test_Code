@@ -71,3 +71,29 @@ onUnload_()
                         -54 调用EME的cancelKeyRequest()    ----    这个地方因为没有DRM测试过，类的对应不一定准确
             -55 MediaElement的setMediaKeys为NULL
     -56 /lib/player.js shaka.Player.updateBufferState_()    ----     将buffer state更新下，并发送buffering通知下。
+    
+    
+    onInitializeMediaSourceEngine_()
+    -1 /lib/media/closed_caption_parser.js shaka.media.ClosedCaptionParser.constructor()
+        -2 /lib/cea/mp4_cea_parser.js shaka.cea.Mp4CeaParser.constructor()
+            -3 /lib/cea/sei_processor.js shaka.cea.SeiProcessor.constructor()
+        -4 /lib/cea/cea_decoder.js shaka.cea.CeaDecoder.constructor()
+            -5 /lib/cea/dtvcc_packet_builder.js shaka.cea.DtvccPacketBuilder.constructor()
+            -6 /lib/cea/cea608_data_channel.js shaka.cea.Cea608DataChannel.contructor()
+                -7 /lib/cea/cea608_memory.js shaka.cea.Cea608Memory.constructor()
+                    -8 /lib/cea/cea608_memory.js shaka.cea.Cea608Memory.reset()
+                        -9 /lib/cea/cea608_memory.js shaka.cea.Cea608Memory.resetAllRows()
+                            -10 /lib/cea/cea608_memory.js shaka.cea.Cea608Memory.resetRows()
+    -11 /lib/util/functional.js shaka.util.Functional.callFactory()
+		-12 /lib/player.js shaka.Player.textDisPlayerFactory()    ----    在defaultConfig_()函数中定义的，主要用于创建textDisplay对象
+			-13 /lib/text/simple_text_displayer.js shaka.text.SimpleTextDisplayer.constructor()
+				-14 将Media Element里面的track都disable掉
+				-15 调用MediaElement的addTextTrack函数，增加一个subtitles track,label为Shaka Player TextTrack
+				-16 将texttrack 模式设置为hidden
+    -17 /lib/player.js shaka.Player.createStreamingEngine()
+        -18 /lib/media/media_source_engine.js shaka.media.MediaSourceEngine.constructor()
+			-19 创建一个MediaSource对象
+			-20 /lib/media/media_source_engine.js shaka.media.MediaSourceEngine.createMediaSource()
+				-21 监听一次sourceopen消息，当消息到达时，触发onSourceOpen_函数，这个函数主要是释放掉文件URL的内存。
+				-22 /lib/media/media_source_engine.js shaka.media.MediaSourceEngine.createObjectURL    ----    这个其实就是window.URL.createObjectURL，主要就是根据创建的MediaSource做个URL，然后传给MediaElement的src使用。
+    -23 /lib/media/media_source_engine.js shaka.media.MediaSourceEngine.open()

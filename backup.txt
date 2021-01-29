@@ -15,60 +15,59 @@
 			-/lib/player.js shaka.Player.action()
 
 onUnload_()
-	- /lib/player.js 设置loadMode_为NOT_LOADED
-	- /lib/player.js 执行注册的cleanup Callback
-	- /lib/player.js dispatchEvent(this.makeEvent_(shaka.Player.EventName.Unloading))    ----    上抛Unloading消息
-	- /lib/player.js 停止监听MediaoElement的 'loadedmetadata'，'playing'，'pause'，'ended'，'ratechange'消息
-	- /lib/media/playhead_observer.js shaka.media.PlayheadObserverManager.release()
-		- /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每4s执行一次的observer触发，一般都是发送消息，类似心跳检测的一种事件触发机制
-    - /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每0.25s执行一次的buffering state update操作
-	- /lib/dash/dash_parser.js shaka.dash.DashParser.stop()    ----    因为这里我测试的是dash流，其他流对应的parser不一样。
-    	- /lib/media/segment_index.js shaka.media.SegmentIndex.release()    ----    释放dash的segment Index存放的数据
-        	- /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每segment update时间执行一次的segment update定时器
-        - /lib/util/periods.js shaka.util.PeriodCombiner.release()    ----    释放存储的multi-period stream的segment index信息
-        	- /lib/media/segment_index.js shaka.media.MetaSegmentIndex.release()
-        - /lib/util/timer.js shaka.util.Timer.stop()    ----    停止manifest更新的定时器
-        - /lib/util/operation_manager.js shaka.util.OperationManager.destroy()    ----    这个主要用与让operation执行完成之后再移除这个操作，类似一个线程池
-	- /lib/abr/simple_abr_manager.js shaka.abr.SimpleAbrManager.stop()
-	- /lib/media/streaming_engine.js shaka.media.StreamingEngine.destroy()
-		- /lib/util/destroyer.js shaka.util.Destroyer.destroy()    ----    异步执行destroy操作
-			- /lib/media/streaming_engine.js shaka.media.StreamingEngine.doDestroy_()
-              	-/lib/media/streaming_engine.js shaka.media.StreamingEngine.cancelUpdate()    ----    停止StreamingEngine的update timer
-	- /lib/media/play_rate_controller.js shaka.media.PlayRateController.release()
-      	- /lib/util/timer.js shaka.util.Timer.stop()    ----    停止rate change的情况下，对mediaSource的timestamp增长修正操作
-	- /lib/media/playhead.js shaka.media.MediaSourcePlayhead.release()
-      	- /lib/media/playhead.js shaka.media.MediaSourcePlayhead.release()
-          	- /lib/media/video_wrapper.js shaka.media.VideoWrapper.release()
-              	- /lib/util/event_manager.js shaka.util.EventManager.release()
-                - /lib/media/video_wrapper.js shaka.media.VideoWrapper.PlayheadMover.release()
-                	- /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每隔100ms对mediaElement的时间的修正，该操作主要作用与seek操作。
-            - /lib/media/gap_jumping_controller.js shaka.media.GapJumpingController.release()
-              	- /lib/util/event_manager.js shaka.util.EventManager.release()
-                - /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每隔0.25s执行一次的对流有gap的jump操作的计时器
-                - /lib/media/stall_detector.js shaka.media.StallDetector.release()    ----    这个其实就是个delay detect的模块，主要用于探测流出现delay或者gap的时候，进行jump追上的问题。
-	- /lib/media/media_source_engine.js shaka.media.MediaSourceEngine.destroy()
-		- /lib/util/destroyer.js shaka.util.Destroyer.destroy()
-			- /lib/media/media_source_engine.js shaka.media.MediaSourceEngine.doDestroy_()
-              - /lib/media/media_source_engine.js 首先等待所有正在执行的操作执行完，未执行的操作，直接reject掉。
-              - /lib/text/text_engine.js shaka.text.TextEngine.destroy()    ----   将TextEngine的destroy操作也放进clean队列执行
-              - /lib/text/simple_text_displayer.js shaka.text.SimpleTextDisplayer.destory()
-                	- /lib/text/simple_text_displayer.js shaka.text.SimpleTextDisplayer.removeWhere_()    ----    将textTracker的状态设置为disable，然后清楚掉trak里面的所有的数据。
-              - /lib/media/transmuxer.js shaka.media.Transmuxer.destroy()    ----    这里用的实际上是/node_modules/mux.js/mp4/transmuxer.js这个muxer
-              - mediaSource的removeAttribute函数，主要是停止接收数据的。
-	- /lib/ads/ad_manager.js shaka.ads.AdManager.onAssetUnload()
-		- /lib/ads/client_side_ad_manager.js shaka.ads.ClientSideAdManager.stop()
-		- 触发AD_STOPPED, 因为接收这个event的代码太多了,主要用于关闭display和ui的显示的,在这里就不描述了,详情可以追下代码
-    - remove MediaElement所有的track nodes
-	- /lib/media/drm_engine.js shaka.media.DrmEngine.destroy()
-		- /lib/util/destroyer.js shaka.util.Destroyer.destroy()
-			- /lib/media/drm_engine.js shaka.media.DrmEngine.destroyNow_()
-              	- /lib/util/event_manager.js shaka.util.EventManager.release()
-                - /lib/media/drm_engine.js shaka.media.DrmEngine.areAllSessionsLoaded_()    ----   停止接收所有的sessions操作
-                - /lib/util/timer.js shaka.util.Timer.stop()    ----    停止sessions的过期时间的更新操作，但是因为dash里面还没实现，所以这个timer没有实际用处
-                - /lib/util/timer.js shaka.util.Timer.stop()    ----    停止所有keys过期的检查timer
-                - /lib/media/drm_engine.js shaka.media.DrmEngine.closeOpenSessions_()
-                  	- /lib/media/drm_engine.js shaka.media.DrmEngine.closeSession_()
-                      	- /lib/polyfill/patchedmediakeys_webkit.js shaka.polyfill.PatchedMediaKeysWebkit.MediaKeySession.close()
-                          	- 调用EME的cancelKeyRequest()    ----    这个地方因为没有DRM测试过，类的对应不一定准确
-                - MediaElement的setMediaKeys为NULL
-	- /lib/player.js shaka.Player.updateBufferState_()    ----     将buffer state更新下，并发送buffering通知下。
+    -1 /lib/player.js 设置loadMode_为NOT_LOADED
+    -2 /lib/player.js 执行注册的cleanup Callback
+    -3 /lib/player.js dispatchEvent(this.makeEvent_(shaka.Player.EventName.Unloading))    ----    上抛Unloading消息
+    -4 /lib/player.js 停止监听MediaoElement的 'loadedmetadata'，'playing'，'pause'，'ended'，'ratechange'消息
+    -5 /lib/media/playhead_observer.js shaka.media.PlayheadObserverManager.release()
+        -6 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每4s执行一次的observer触发，一般都是发送消息，类似心跳检测的一种事件触发机制
+    -7 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每0.25s执行一次的buffering state update操作
+    -8 /lib/dash/dash_parser.js shaka.dash.DashParser.stop()    ----    因为这里我测试的是dash流，其他流对应的parser不一样。
+        -9 /lib/media/segment_index.js shaka.media.SegmentIndex.release()    ----    释放dash的segment Index存放的数据
+            -10 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每segment update时间执行一次的segment update定时器
+        -11 /lib/util/periods.js shaka.util.PeriodCombiner.release()    ----    释放存储的multi-period stream的segment index信息
+            -12 /lib/media/segment_index.js shaka.media.MetaSegmentIndex.release()
+        -13 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止manifest更新的定时器
+        -14 /lib/util/operation_manager.js shaka.util.OperationManager.destroy()    ----    这个主要用与让operation执行完成之后再移除这个操作，类似一个线程池
+    -15 /lib/abr/simple_abr_manager.js shaka.abr.SimpleAbrManager.stop()
+    -16 /lib/media/streaming_engine.js shaka.media.StreamingEngine.destroy()
+        -17 /lib/util/destroyer.js shaka.util.Destroyer.destroy()    ----    异步执行destroy操作
+            -18 /lib/media/streaming_engine.js shaka.media.StreamingEngine.doDestroy_()
+                -19 /lib/media/streaming_engine.js shaka.media.StreamingEngine.cancelUpdate()    ----    停止StreamingEngine的update timer
+    -20 /lib/media/play_rate_controller.js shaka.media.PlayRateController.release()
+        -21 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止rate change的情况下，对mediaSource的timestamp增长修正操作
+    -22 /lib/media/playhead.js shaka.media.MediaSourcePlayhead.release()
+        -23 /lib/media/video_wrapper.js shaka.media.VideoWrapper.release()
+            -24 /lib/util/event_manager.js shaka.util.EventManager.release()
+                -25 /lib/media/video_wrapper.js shaka.media.VideoWrapper.PlayheadMover.release()
+                    -26 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每隔100ms对mediaElement的时间的修正，该操作主要作用与seek操作。
+        -27 /lib/media/gap_jumping_controller.js shaka.media.GapJumpingController.release()
+            -28 /lib/util/event_manager.js shaka.util.EventManager.release()
+                -29 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止每隔0.25s执行一次的对流有gap的jump操作的计时器
+                -30 /lib/media/stall_detector.js shaka.media.StallDetector.release()    ----    这个其实就是个delay detect的模块，主要用于探测流出现delay或者gap的时候，进行jump追上的问题。
+    -31 /lib/media/media_source_engine.js shaka.media.MediaSourceEngine.destroy()
+        -32 /lib/util/destroyer.js shaka.util.Destroyer.destroy()
+            -33 /lib/media/media_source_engine.js shaka.media.MediaSourceEngine.doDestroy_()
+                -34 /lib/media/media_source_engine.js 首先等待所有正在执行的操作执行完，未执行的操作，直接reject掉。
+                    -35 /lib/text/text_engine.js shaka.text.TextEngine.destroy()    ----   将TextEngine的destroy操作也放进clean队列执行
+                    -36 /lib/text/simple_text_displayer.js shaka.text.SimpleTextDisplayer.destory()
+                        -37 /lib/text/simple_text_displayer.js shaka.text.SimpleTextDisplayer.removeWhere_()    ----    将textTracker的状态设置为disable，然后清楚掉trak里面的所有的数据。
+        -38 /lib/media/transmuxer.js shaka.media.Transmuxer.destroy()    ----    这里用的实际上是/node_modules/mux.js/mp4/transmuxer.js这个muxer
+        -39 mediaSource的removeAttribute函数，主要是停止接收数据的。
+    -40 /lib/ads/ad_manager.js shaka.ads.AdManager.onAssetUnload()
+        -41 /lib/ads/client_side_ad_manager.js shaka.ads.ClientSideAdManager.stop()
+        -42 触发AD_STOPPED, 因为接收这个event的代码太多了,主要用于关闭display和ui的显示的,在这里就不描述了,详情可以追下代码
+    -43 remove MediaElement所有的track nodes
+    -44 /lib/media/drm_engine.js shaka.media.DrmEngine.destroy()
+        -45 /lib/util/destroyer.js shaka.util.Destroyer.destroy()
+            -46 /lib/media/drm_engine.js shaka.media.DrmEngine.destroyNow_()
+            -47 /lib/util/event_manager.js shaka.util.EventManager.release()
+            -48 /lib/media/drm_engine.js shaka.media.DrmEngine.areAllSessionsLoaded_()    ----   停止接收所有的sessions操作
+            -49 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止sessions的过期时间的更新操作，但是因为dash里面还没实现，所以这个timer没有实际用处
+            -50 /lib/util/timer.js shaka.util.Timer.stop()    ----    停止所有keys过期的检查timer
+            -51 /lib/media/drm_engine.js shaka.media.DrmEngine.closeOpenSessions_()
+                -52 /lib/media/drm_engine.js shaka.media.DrmEngine.closeSession_()
+                    -53 /lib/polyfill/patchedmediakeys_webkit.js shaka.polyfill.PatchedMediaKeysWebkit.MediaKeySession.close()
+                        -54 调用EME的cancelKeyRequest()    ----    这个地方因为没有DRM测试过，类的对应不一定准确
+            -55 MediaElement的setMediaKeys为NULL
+    -56 /lib/player.js shaka.Player.updateBufferState_()    ----     将buffer state更新下，并发送buffering通知下。

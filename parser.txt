@@ -86,3 +86,24 @@ shaka.ManifestParser = class {
     update() {}                                      ----    手动manifest更新
     onExpirationUpdated(sessionId, expiration) {}    ----    通知parser EME的有效期已经改变
 }
+
+
+
+Network Engine Register Flow:
+    -1 通过调用函数registerScheme
+    -2 将注册的Network Engine放到schemes_里面
+    -3 通过map的index找寻对应的Network Engine
+    -4 调用Network Engine的plugin函数来运行
+    -5 通过调用函数unregisterScheme，取消Network Engine的注册
+
+Network Engine 注册函数：
+    static registerScheme(scheme, plugin, priority)
+    参数1: scheme Network Engine的名字    ----    该字符串用于区分Network Engine的类型，主要是通过URL获取，也通过浏览器的默认信息获取
+    参数2：plugin Network Engine的调用函数    ----    这个就是Network Engine正式启用函数
+    参数3：priority Network Engine的优先级     ----    主要分为FALLBACK, PREFERRED, APPLICATION三种，不过就目前代码来看，还没有实际用上
+    函数功能： 注册Network Engine到schemes_中
+    
+Network Engine基类：
+shaka.net.NetworkEngine = class {
+    static parse(uri, request, requestType, progressUpdated) {}    ----    调用parser，执行对应数据，在注册的时候，不一定函数名要为parser，任何都可以，这里实际就是注册一个函数给到net.NetworkingEngine中
+}

@@ -1,0 +1,88 @@
+onInitializeParser_()
+    -1 /lib/media/manifest_parser.js shaka.media.ManifestParser.getFactory()    ----    如何注册Manifest factory将在后面的PPT详述
+        -2 从shaka.media.ManifestParser.parsersByMime的数组中根据MIME Type来找寻对象，其中的对象必须是通过MIME Type注册进来的
+        -3 /lib/media/manifest_parser.js shaka.media.ManifestParser.getExtension()    ----    就是获取URL的末尾字符串，用来判断是什么流，比如"mpd"/"m3u8"
+        -4 从shaka.media.ManifestParser.parserByExtension的数组中根据尾端字符串来找寻对象，其中的对象必须是通过末尾字符串注册进来的
+        -5 /lib/media/manifest_parser.js shaka.media.ManifestParser.getMimeType()
+            -6 /lib/net/networking_engine.js shaka.net.NetworkingEngine.makeRequest()    ----    做一个向URL Get的一个http request
+            -7 /lib/net/networking_engine.js shaka.net.NetworkingEngine.request()
+                -8 /lib/net/networking_engine.js shaka.net.NetworkingEngine.NumBytesRemainingClass.constructor()    ----    这个结构体主要是在下载过程中存储剩余多少字节还没有下载
+                -9 /lib/net/networking_engine.js shaka.net.NetworkingEngine.defaultRetryParameters()
+                    -10 /lib/net/backoff.js shaka.net.Backoff.defaultRetryParameters()    ----    这里其实就是做个default的retry parameter，结构为{maxAttempts, baseDelay, backoffFactro, fuzzFactor, timeout}
+                -11 /lib/util/object_utils.js shaka.util.ObjectUtils.cloneObject()    ----    其实就是个深拷贝，因为在JavaScript中，直接=都是浅拷贝，所以需要写个深拷贝函数来实现深拷贝
+                -12 /lib/net/networking_engine.js shaka.net.NetworkingEngine.filterRequest_()
+                    -13 /lib/util/abortable_operation.js shaka.util.AbortableOperation.completed()    ----    创建一个成功的可被打断的Promise对象，AbortableOperation是个Promise函数，在执行过程中，可以设置它的aborted_参数，从而打断当前操作
+                    -14 /lib/util/abortable_operation.js shaka.util.AbortableOperation.chain()    ----    将放入的callback做成一个Promise函数，并且在执行callback之前查看下是否被abort了
+                        -15 /lib/util/abortable_operation.js shaka.util.AbortableOperation.wrapChainCallback_()    ----    真正执行callback的函数，里面会根据callback是否发生error来判断是否需要走Error流程
+                            -16 /lib/net/networking_engine.js 执行requestFilter，这个是由registerRequestFilter注册进来的，一般都是外部对http request内部的头部或者body的一些修正或者添加操作
+                    -17 /lib/util/abortable_operation.js shaka.util.AbortableOperation.chain()    ----    这一步主要是对error的处理，如果在运行过程中出现error，该操作会捕捉error并且上抛上去
+                -18 /lib/util/abortable_operation.js shaka.util.AbortableOperation.chain()
+                    -19 /lib/net/networking_engine.js shaka.net.NetworkingEngine.makeRequestWithRetry_()    ----    执行request的操作
+                        -20 /lib/net/backoff.js shaka.net.Backoff.constructor()    ----    这个主要是用来存储一些下载信息的，防止单路下载失败的时候，重新下载使用
+                            -21 /lib/net/backoff.js shaka.net.Backoff.defaultRetryParameters()
+                        -22 /lib/net/networking_engine.js shaka.net.NetworkingEngine.send_()
+                            -23 uri.getScheme()    ----    这里主要是通过goog.uri库来获取uri所对应的协议，但并不是一定成功
+                            -24 /lib/net/networking_engine.js shaka.net.NetworkingEngine.getLocationProtocol_()    ----    这里是通过Web Browser的接口来获取协议
+                            -25 uri.setScheme()    ----    这里主要是通过获取到的协议，重做URL
+                            -26 根据协议获取存放在shaka.net.NetworkingEngine.schemes_中的对象，，其中对象如何注册，会在后面的PPT详述
+                            -27 /lib/util/abortable_operation.js shaka.util.AbortableOperation.notAbortable()    ----    这里其实就是个正常的promise，不具备过程中打断操作
+                            -28 /lib/util/abortable_operation.js shaka.util.AbortableOperation.chain()
+                                -29 plugin()    ----    根据获取的协议对象执行下载操作，这里一般都是FETCH居多
+                                -30 /lib/net/http_fetch_plugin.js shaka.net.HttpFetchPlugin.parse()
+                                    -31 /lib/net/http_fetch_plugin.js shaka.net.HttpFetchPlugin.Headers_()    ----    这里其实调用的就是window.Headers(),也就是FETCH创建Headers对象
+                                    -32 headers.append    ----    这里就是将之前对headers修正的数据都加入到现在的head里面
+                                    -33 /lib/net/http_fetch_plugin.js shaka.net.HttpFetchPlugin.AbortController_()    ----    这里其实调用的是window.AbortController,也就是个controller，主要是对fetch过程的abort error进行监听的。
+                                    -34 /lib/net/http_fetch_plugin.js shaka.net.HttpFetchPlugin.request_()
+                                        -35 /lib/net/http_fetch_plugin.js shaka.net.HttpFetchPlugin.fetch_()    ----    这里其实调用的是window.fetch,也就是浏览器自带的fetch函数
+                                        -36 ReadableStream.getReader()    ----    该操作会将流锁定，直到将流释放后，才可以继续使用
+                                        -37 ReadableStream.ReadableStream()    ----    开始数据读取
+                                        -38 ReadableStream.read()    ----    将数据从流里面copy出来
+                                        -39 streamDataCallback(readObj.value)    ----    这里注意下，这里注册的是执行onProgressUpdated_,这个实际实现的地方是player.js里面的createNetworkingEngine里面，但是因为在创建这个的时候abrManager还没有创建，所以没什么结果
+                                        -40 ReadableByteStreamController.enqueue()    ----    这里是对数据没有读完，再继续读取,之后调用了push()继续读取数据
+                                    -41 /lib/net/http_plugin_utils.js shaka.net.HttpPluginUtils.makeResponse()    ----    成功读取数据后，制作responce,结构体为{uri, originalUri, data, headers, fromCache}
+                                    -42 /lib/util/abortable_operation.js shaka.util.AbortableOperation.constructor()    ----    因为request_是个async函数，所以加个可被打断操作
+                                    -43 创建个timer，防范下载超时
+                -44 /lib/net/networking_engine.js shaka.net.NetworkingEngine.filterResponse_()
+                    -45 /lib/util/abortable_operation.js shaka.util.AbortableOperation.completed()
+                        -46 这边执行的是通过registerResponseFilter注册到responseFilters_的操作，这里一般都是对responce信息的读取，来满足一些需求
+                -47 如果在内部的onProgressUpdated_没有执行成功，则会再执行一次
+            -48 从头部获取content-type，来获得MIME Type
+        -49 从shaka.media.ManifestParser.parsersByMime的数组中根据MIME Type来找寻对象，其中的对象必须是通过MIME Type注册进来的
+    -50 /lib/util/functional.js shaka.util.Functional.callFactory()
+        -51 /lib/dash/dash_parser.js shaka.dash.DashParser.constructor()    ----    这里我是以dash流为例写的
+            -52 /lib/util/periods.js shaka.util.PeriodCombiner.constructor()
+            -53 /lib/abr/ewma.js shaka.abr.Ewma.constructor()
+            -54 /lib/util/timer.js shaka.util.Timer.constructor()    ----    这里是启动了一个定时进行onUpdate_()的定时器，该函数主要就是执行定时更新manifest
+            -55 /lib/util/operation_manager.js shaka.util.OperationManager.constructor()
+    -56 /lib/dash/dash_parser.js shaka.dash.DashParser.configure()
+    
+Parser Register Flow:
+    -1 通过调用函数registerParser
+    -2 将注册的parser放到对应的map里面
+    -3 通过map的index找寻对应的parser
+    -4 调用parser的parserFactory函数，创建对象
+    -5 调用parser的configure函数来更新parser信息
+    -6 调用start，启动parser
+    -7 调用stop，停止parser
+    -8 通过调用函数UnregisterParser，取消Parser的注册、
+
+Praser 注册函数：
+    static registerParserByExtension(extension, parserFactory)
+    参数1: extension 字符串    ----    该字符串存放在URL的尾部，用于判断当前是什么流，例如：mpd
+    参数2：parserFactory 创建对象函数    ----    用于创建对应的对象
+    函数功能： 将注册的parser存放在parsersByExtension中
+    
+    static registerParserByMime(mimeType, parserFactory)
+    参数1： mimeType MIME字符串    ----    该字符串用于区分parser信息，是在下载后数据后的content-type或者APP设置下来的MIME Type
+    参数2： parserFactory 创建对象函数    ----    用于创建对应的对象
+    函数功能： 将注册的parser存放在parsersByMime中
+    
+Parser基类：
+shaka.ManifestParser = class {
+    constructor() {}                                 ----    构造函数
+    configure(config) {}                             ----    更新parser的configuration
+    start(uri, playerInterface) {}                   ----    初始化和启动parser
+    stop() {}                                        ----    通知parser停止运行，并释放资源
+    update() {}                                      ----    手动manifest更新
+    onExpirationUpdated(sessionId, expiration) {}    ----    通知parser EME的有效期已经改变
+}

@@ -137,22 +137,53 @@ onInitializeParser_()
                                         -35 /lib/net/http_fetch_plugin.js shaka.net.HttpFetchPlugin.fetch_()    ----    这里其实调用的是window.fetch,也就是浏览器自带的fetch函数
                                         -36 ReadableStream.getReader()    ----    该操作会将流锁定，直到将流释放后，才可以继续使用
                                         -37 ReadableStream.ReadableStream()    ----    开始数据读取
-                                        -37 ReadableStream.read()    ----    将数据从流里面copy出来
-                                        -38 streamDataCallback(readObj.value)    ----    这里注意下，这里注册的是执行onProgressUpdated_,这个实际实现的地方是player.js里面的createNetworkingEngine里面，但是因为在创建这个的时候abrManager还没有创建，所以没什么结果
-                                        -39 ReadableByteStreamController.enqueue()    ----    这里是对数据没有读完，再继续读取,之后调用了push()继续读取数据
-                                    -40 /lib/net/http_plugin_utils.js shaka.net.HttpPluginUtils.makeResponse()    ----    成功读取数据后，制作responce,结构体为{uri, originalUri, data, headers, fromCache}
-                                    -41 /lib/util/abortable_operation.js shaka.util.AbortableOperation.constructor()    ----    因为request_是个async函数，所以加个可被打断操作
-                                    -42 创建个timer，防范下载超时
-                -43 /lib/net/networking_engine.js shaka.net.NetworkingEngine.filterResponse_()
-                    -44 /lib/util/abortable_operation.js shaka.util.AbortableOperation.completed()
-                        -45 这边执行的是通过registerResponseFilter注册到responseFilters_的操作，这里一般都是对responce信息的读取，来满足一些需求
-                -46 如果在内部的onProgressUpdated_没有执行成功，则会再执行一次
-            -47 从头部获取content-type，来获得MIME Type
-        -48 从shaka.media.ManifestParser.parsersByMime的数组中根据MIME Type来找寻对象，其中的对象必须是通过MIME Type注册进来的
-    -49 /lib/util/functional.js shaka.util.Functional.callFactory()
-        -50 /lib/dash/dash_parser.js shaka.dash.DashParser.constructor()    ----    这里我是以dash流为例写的
-            -51 /lib/util/periods.js shaka.util.PeriodCombiner.constructor()
-            -52 /lib/abr/ewma.js shaka.abr.Ewma.constructor()
-            -53 /lib/util/timer.js shaka.util.Timer.constructor()    ----    这里是启动了一个定时进行onUpdate_()的定时器，该函数主要就是执行定时更新manifest
-            -54 /lib/util/operation_manager.js shaka.util.OperationManager.constructor()
-    -55 /lib/dash/dash_parser.js shaka.dash.DashParser.configure()
+                                        -38 ReadableStream.read()    ----    将数据从流里面copy出来
+                                        -39 streamDataCallback(readObj.value)    ----    这里注意下，这里注册的是执行onProgressUpdated_,这个实际实现的地方是player.js里面的createNetworkingEngine里面，但是因为在创建这个的时候abrManager还没有创建，所以没什么结果
+                                        -40 ReadableByteStreamController.enqueue()    ----    这里是对数据没有读完，再继续读取,之后调用了push()继续读取数据
+                                    -41 /lib/net/http_plugin_utils.js shaka.net.HttpPluginUtils.makeResponse()    ----    成功读取数据后，制作responce,结构体为{uri, originalUri, data, headers, fromCache}
+                                    -42 /lib/util/abortable_operation.js shaka.util.AbortableOperation.constructor()    ----    因为request_是个async函数，所以加个可被打断操作
+                                    -43 创建个timer，防范下载超时
+                -44 /lib/net/networking_engine.js shaka.net.NetworkingEngine.filterResponse_()
+                    -45 /lib/util/abortable_operation.js shaka.util.AbortableOperation.completed()
+                        -46 这边执行的是通过registerResponseFilter注册到responseFilters_的操作，这里一般都是对responce信息的读取，来满足一些需求
+                -47 如果在内部的onProgressUpdated_没有执行成功，则会再执行一次
+            -48 从头部获取content-type，来获得MIME Type
+        -49 从shaka.media.ManifestParser.parsersByMime的数组中根据MIME Type来找寻对象，其中的对象必须是通过MIME Type注册进来的
+    -50 /lib/util/functional.js shaka.util.Functional.callFactory()
+        -51 /lib/dash/dash_parser.js shaka.dash.DashParser.constructor()    ----    这里我是以dash流为例写的
+            -52 /lib/util/periods.js shaka.util.PeriodCombiner.constructor()
+            -53 /lib/abr/ewma.js shaka.abr.Ewma.constructor()
+            -54 /lib/util/timer.js shaka.util.Timer.constructor()    ----    这里是启动了一个定时进行onUpdate_()的定时器，该函数主要就是执行定时更新manifest
+            -55 /lib/util/operation_manager.js shaka.util.OperationManager.constructor()
+    -56 /lib/dash/dash_parser.js shaka.dash.DashParser.configure()
+    
+Parser Register Flow:
+    -1 通过调用函数registerParser
+    -2 将注册的parser放到对应的map里面
+    -3 通过map的index找寻对应的parser
+    -4 调用parser的parserFactory函数，创建对象
+    -5 调用parser的configure函数来更新parser信息
+    -6 调用start，启动parser
+    -7 调用stop，停止parser
+    -8 通过调用函数UnregisterParser，取消Parser的注册、
+
+Praser 注册函数：
+    static registerParserByExtension(extension, parserFactory)
+    参数1: extension 字符串    ----    该字符串存放在URL的尾部，用于判断当前是什么流，例如：mpd
+    参数2：parserFactory 创建对象函数    ----    用于创建对应的对象
+    函数功能： 将注册的parser存放在parsersByExtension中
+    
+    static registerParserByMime(mimeType, parserFactory)
+    参数1： mimeType MIME字符串    ----    该字符串用于区分parser信息，是在下载后数据后的content-type或者APP设置下来的MIME Type
+    参数2： parserFactory 创建对象函数    ----    用于创建对应的对象
+    函数功能： 将注册的parser存放在parsersByMime中
+    
+Parser基类：
+shaka.extern.ManifestParser = class {
+    constructor() {}                                 ----    构造函数
+    configure(config) {}                             ----    更新parser的configuration
+    start(uri, playerInterface) {}                   ----    初始化和启动parser
+    stop() {}                                        ----    通知parser停止运行，并释放资源
+    update() {}                                      ----    手动manifest更新
+    onExpirationUpdated(sessionId, expiration) {}    ----    通知parser EME的有效期已经改变
+}

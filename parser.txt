@@ -107,3 +107,26 @@ Network Engine基类：
 shaka.net.NetworkEngine = class {
     static parse(uri, request, requestType, progressUpdated) {}    ----    调用parser，执行对应数据，在注册的时候，不一定函数名要为parser，任何都可以，这里实际就是注册一个函数给到net.NetworkingEngine中
 }
+
+
+
+Request and Responce Filter Register Flow:
+    -1 调用函数registerRequestFilter/registerResponseFilter
+    -2 将注册的RequestFilter/ResponceFilter放到对应的requestFilters_/responseFilters_里面
+    -3 将requestFilters_/responseFilters_里面的所有filter函数调用一遍
+    -4 清除requestFilters_/responseFilters_
+    -5 APP也可以通过调用unregisterRequestFilter/unregisterResponseFilter来去除filter函数
+    
+Request and Responce Filter 注册函数：
+    registerRequestFilter(filter)
+    参数1: filter 数据处理函数    ----    注册的函数会在拿到request的数据的时候调用
+    函数功能： 注册filter到requestFilters_中
+    
+    registerResponceFilter(filter)
+    参数1: filter 数据处理函数    ----    注册的函数会在拿到responce的数据的时候调用
+    函数功能： 注册filter到responseFilters_中
+    
+Request and Responce函数模型：
+    filter (type, data) {}    ----    type为MANIFEST, SEGMENT, LICENSE, APP, TIMING五种，主要由代码内部实现过程中设置，data就是要处理的request/responce数据
+	
+P.S: shakaPlayer中，该两个函数主要是针对license信息使用
